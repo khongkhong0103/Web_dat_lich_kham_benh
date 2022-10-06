@@ -5,7 +5,8 @@ import { push } from "connected-react-router";
 import * as actions from "../../store/actions";
 import "./Login.scss";
 import { FormattedMessage } from "react-intl";
-
+import { handleLoginApi } from "../../services/userService";
+import { userLoginSuccess } from "../../store/actions";
 class Login extends Component {
   constructor(props) {
     super(props);
@@ -13,9 +14,9 @@ class Login extends Component {
       username: "",
       password: "",
       isShowPassword: false,
+      errMessage: "",
     };
   }
-
   handleOnChangeUsername = (event) => {
     this.setState({
       username: event.target.value,
@@ -29,7 +30,10 @@ class Login extends Component {
     });
   };
 
-  handleLogin = () => {
+  handleLogin = async () => {
+    this.setState({
+      errMessage: "",
+    });
     console.log(
       "Username: ",
       this.state.username,
@@ -37,10 +41,32 @@ class Login extends Component {
       this.state.password
     );
     console.log("All state:  ", this.state);
+
+    try {
+      let data = await handleLoginApi(this.state.username, this.state.password);
+      if (data && data.errCode !== 0) {
+        this.setState({
+          errMessage: data.message,
+        });
+      }
+      if (data && data.errCode === 0) {
+        this.props.userLoginSuccess(data.user);
+        console.log("login  success");
+      }
+    } catch (error) {
+      // console.log("trongtam", error.response);
+
+      if (error.response) {
+        if (error.response.data) {
+          this.setState({ errMessage: error.response.data.message });
+        }
+      }
+    }
   };
 
   handleShowHidePassword = () => {
     // alert("Show Password");
+
     this.setState({
       isShowPassword: !this.state.isShowPassword,
     });
@@ -93,7 +119,9 @@ class Login extends Component {
                 </span>
               </div>
             </div>
-
+            <div className="col-12" style={{ color: "red" }}>
+              {this.state.errMessage}
+            </div>
             <div className="col-12">
               {" "}
               <button
@@ -133,9 +161,11 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     navigate: (path) => dispatch(push(path)),
-    adminLoginSuccess: (adminInfo) =>
-      dispatch(actions.adminLoginSuccess(adminInfo)),
-    adminLoginFail: () => dispatch(actions.adminLoginFail()),
+    // adminLoginSuccess: (adminInfo) =>
+    //   dispatch(actions.adminLoginSuccess(adminInfo)),
+    // userLoginFail: () => dispatch(actions.adminLoginFail()),
+    userLoginSuccess: (userInfo) =>
+      dispatch(actions.userLoginSuccess(userInfo)),
   };
 };
 
